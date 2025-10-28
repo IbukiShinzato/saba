@@ -51,6 +51,54 @@ impl HtmlTokenizer {
             self.latest_token = Some(HtmlToken::EndTag { tag: String::new() });
         }
     }
+
+    // create_tagメソッドによって作られた最後のトークン(latest_token)に対して、1文字をそのトークンのタグの名前として追加する
+    fn append_tag_name(&mut self, c: char) {
+        // latest_tokenがSomeの値を持っているか
+        assert!(self.latest_token.is_some());
+
+        // latest_tokenの可変参照を取得
+        if let Some(t) = self.latest_token.as_mut() {
+            match t {
+                HtmlToken::StartTag {
+                    ref mut tag,
+                    self_closing: _,
+                    attributes: _,
+                }
+                | HtmlToken::EndTag { ref mut tag } => tag.push(c),
+                _ => panic!("`latest_token` should be either StartTag or EndTag"),
+            }
+        }
+    }
+
+    // create_tagメソッドによって作られた最後のトークン(latest_token)を返す
+    fn take_latest_token(&mut self) -> Option<HtmlToken> {
+        assert!(self.latest_token.is_some());
+
+        let t = self.latest_token.as_ref().cloned();
+        self.latest_token = None;
+        assert!(self.latest_token.is_none());
+
+        t
+    }
+
+    // create_tagメソッドによって作られた最後のトークン(latest_token)に属性を追加する
+    fn start_new_attribute(&mut self) {
+        assert!(self.latest_token.is_some());
+
+        if let Some(t) = self.latest_token.as_mut() {
+            match t {
+                HtmlToken::StartTag {
+                    tag: _,
+                    self_closing: _,
+                    ref mut attributes,
+                } => {
+                    attributes.push(Attribute::new());
+                }
+                _ => panic!("`latest_token` should be either StartTag"),
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -184,8 +232,49 @@ impl Iterator for HtmlTokenizer {
                     }
                 }
 
-                State::TagName => todo!(),
-                State::BeforeAttributeName => todo!(),
+                // タグの名前を扱うための状態
+                State::TagName => {
+                    if c == ' ' {
+                        self.state = State::BeforeAttributeName;
+                        continue;
+                    }
+
+                    if c == '/' {
+                        self.state = State::SelfClosingStartTag;
+                        continue;
+                    }
+
+                    if c == '>' {
+                        self.state = State::Data;
+                        return self.take_latest_token();
+                    }
+
+                    if c.is_ascii_uppercase() {
+                        // 小文字をtagに入れる
+                        self.append_tag_name(c.to_ascii_lowercase());
+                        continue;
+                    }
+
+                    if self.is_eof() {
+                        return Some(HtmlToken::Eof);
+                    }
+
+                    self.append_tag_name(c);
+                }
+
+                // タグ属性の名前を処理する前の状態
+                State::BeforeAttributeName => {
+                    if c == '/' || c == '>' || self.is_eof() {
+                        self.reconsume = true;
+                        self.state = State::AfterAttributeName;
+                        continue;
+                    }
+
+                    self.reconsume = true;
+                    self.state = State::AttributeName;
+                    self.start_new_attribute();
+                }
+
                 State::AttributeName => todo!(),
                 State::AfterAttributeName => todo!(),
                 State::BeforeAttributeValue => todo!(),
