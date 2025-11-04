@@ -25,54 +25,9 @@ impl Window {
 
         window
     }
-}
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Element {
-    kind: ElementKind,
-    attributes: Vec<Attribute>,
-}
-
-impl Element {
-    pub fn new(element_name: &str, attributes: Vec<Attribute>) -> Self {
-        Self {
-            kind: ElementKind::from_str(element_name)
-                .expect("failed to convert string to ElementKind"),
-            attributes,
-        }
-    }
-
-    pub fn kind(&self) -> ElementKind {
-        self.kind
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ElementKind {
-    // <html>
-    Html,
-    // <head>
-    Head,
-    // <style>
-    Style,
-    // <script>
-    Script,
-    // <body>
-    Body,
-}
-
-impl FromStr for ElementKind {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "html" => Ok(ElementKind::Html),
-            "head" => Ok(ElementKind::Head),
-            "style" => Ok(ElementKind::Style),
-            "script" => Ok(ElementKind::Script),
-            "body" => Ok(ElementKind::Body),
-            _ => Err(format!("unimplemented element name {:?}", s)),
-        }
+    pub fn document(&self) -> Rc<RefCell<Node>> {
+        self.document.clone()
     }
 }
 
@@ -94,12 +49,12 @@ pub struct Node {
     next_sibling: Option<Rc<RefCell<Node>>>,
 }
 
-// // PartialEqを継承
-// impl PartialEq for Node {
-//     fn eq(&self, other: &Self) -> bool {
-//         self.kind == other.kind
-//     }
-// }
+// ノードの種類で比較
+impl PartialEq for Node {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
+    }
+}
 
 // 双方向リンクを持つ木構造ノード
 impl Node {
@@ -203,10 +158,77 @@ pub enum NodeKind {
     Text(String),
 }
 
-// impl PartialEq for NodeKind {
-//     fn eq(&self, other: &Self) -> bool {
-//         match &self {
-//             NodeKind::Document =>
-//         }
-//     }
-// }
+impl PartialEq for NodeKind {
+    fn eq(&self, other: &Self) -> bool {
+        match &self {
+            // matches!マクロを使うことによって指定されたパターンのいずれかに一致するかを見ることができる
+            NodeKind::Document => matches!(other, NodeKind::Document),
+            NodeKind::Element(e1) => match &other {
+                NodeKind::Element(e2) => e1.kind == e2.kind,
+                _ => false,
+            },
+            NodeKind::Text(_) => matches!(other, NodeKind::Text(_)),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Element {
+    kind: ElementKind,
+    attributes: Vec<Attribute>,
+}
+
+impl Element {
+    pub fn new(element_name: &str, attributes: Vec<Attribute>) -> Self {
+        Self {
+            kind: ElementKind::from_str(element_name)
+                .expect("failed to convert string to ElementKind"),
+            attributes,
+        }
+    }
+
+    pub fn kind(&self) -> ElementKind {
+        self.kind
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum ElementKind {
+    // <html>
+    Html,
+    // <head>
+    Head,
+    // <style>
+    Style,
+    // <script>
+    Script,
+    // <body>
+    Body,
+    // <p>
+    P,
+    // <h1>
+    H1,
+    // <h2>
+    H2,
+    // <a>
+    A,
+}
+
+impl FromStr for ElementKind {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "html" => Ok(ElementKind::Html),
+            "head" => Ok(ElementKind::Head),
+            "style" => Ok(ElementKind::Style),
+            "script" => Ok(ElementKind::Script),
+            "body" => Ok(ElementKind::Body),
+            "p" => Ok(ElementKind::P),
+            "h1" => Ok(ElementKind::H1),
+            "h2" => Ok(ElementKind::H2),
+            "a" => Ok(ElementKind::A),
+            _ => Err(format!("unimplemented element name {:?}", s)),
+        }
+    }
+}
