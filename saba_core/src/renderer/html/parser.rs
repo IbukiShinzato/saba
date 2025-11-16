@@ -640,12 +640,38 @@ mod tests {
             .borrow()
             .next_sibling()
             .expect("failed to get a next sibling of head");
-        assert!(
+        assert_eq!(
             Rc::new(RefCell::new(Node::new(NodeKind::Element(Element::new(
                 "body",
                 Vec::new()
             ))))),
             body
+        );
+    }
+
+    #[test]
+    fn test_text() {
+        let html = "<html><head></head><body>text</body></html>".to_string();
+        let t = HtmlTokenizer::new(html);
+        let window = HtmlParser::new(t).construct_tree();
+
+        // ルートノードがNodeKind::Documentであるか
+        let document = window.borrow().document();
+        assert_eq!(
+            Rc::new(RefCell::new(Node::new(NodeKind::Document))),
+            document
+        );
+
+        let html = document
+            .borrow()
+            .first_child()
+            .expect("failetd to get a first child of document");
+        assert_eq!(
+            Rc::new(RefCell::new(Node::new(NodeKind::Element(Element::new(
+                "body",
+                Vec::new()
+            ))))),
+            html
         );
     }
 }
