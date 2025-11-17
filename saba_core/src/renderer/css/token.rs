@@ -4,26 +4,35 @@ use alloc::vec::Vec;
 #[derive(Debug, Clone, PartialEq)]
 pub enum CssToken {
     HashToken(String),
+    // 区切り　',' '.'　など
     Delim(char),
     Number(f64),
+    // コロン　':'
     Colon,
+    // セミコロン　';'
     Semicolon,
+    // 丸括弧（開き）　'('
     OpenParenthesis,
+    // 丸括弧（閉じ）　')'
     CloseParenthesis,
+    // 波括弧（開き）　'{'
     OpenCurly,
+    // 波括弧（閉じ）　'}'
     CloseCurly,
     Ident(String),
-    StoryToken(String);
-    AtKeyword()
+    // 文字列トークン
+    StringToken(String),
+    AtKeyword(String),
 }
 
-#[device(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CssTokenizer {
     pos: usize,
     input: Vec<char>,
 }
 
 impl CssTokenizer {
+    // コンストラクタ
     pub fn new(css: String) -> Self {
         Self {
             pos: 0,
@@ -38,17 +47,18 @@ impl CssTokenizer {
             if self.pos >= self.input.len() {
                 return s;
             }
+
             self.pos += 1;
             let c = self.input[self.pos];
             match c {
-                '"' | '\'' => {
-                    break;
-                }
+                '"' | '\'' => break,
                 _ => {
                     s.push(c);
                 }
             }
         }
+
+        s
     }
 
     // 数字の文字列をf64で返す
@@ -66,7 +76,7 @@ impl CssTokenizer {
             match c {
                 '0'..='9' => {
                     if floating {
-                        ffloating_digit *= 1f64 / 10f64;
+                        floating_digit *= 1f64 / 10f64;
                         num += (c.to_digit(10).unwrap() as f64) * floating_digit
                     } else {
                         num = num * 10.0 + (c.to_digit(10).unwrap() as f64);
@@ -78,7 +88,7 @@ impl CssTokenizer {
                     floating = true;
                     self.pos += 1;
                 }
-                
+
                 _ => {
                     break;
                 }
@@ -110,28 +120,32 @@ impl CssTokenizer {
 impl Iterator for CssTokenizer {
     type Item = CssToken;
 
+    // 入力のCSS文字列の1文字ずつ見ていく
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if self.pos >= self.input.len() {
                 return None;
             }
-            
+
+            // 1文字とる
             let c = self.input[self.pos];
 
             let token = match c {
                 '(' => CssToken::OpenParenthesis,
                 ')' => CssToken::CloseParenthesis,
-                ',' => cssToken::Delim(','),
+                ',' => CssToken::Delim(','),
                 '.' => CssToken::Delim('.'),
                 ':' => CssToken::Colon,
                 ';' => CssToken::Semicolon,
                 '{' => CssToken::OpenCurly,
                 '}' => CssToken::CloseCurly,
-                ' ' | '\n' => { // 今は一時的に空文字と改行をスキップ
+                ' ' | '\n' => {
+                    // 今は一時的に空文字と改行をスキップ
                     self.pos += 1;
                     continue;
                 }
                 '"' | '\'' => {
+                    // 次のクォーテーションが来るまで入力を文字として解釈
                     let value = self.consume_string_token();
                     CssToken::StringToken(value)
                 }
@@ -168,13 +182,12 @@ impl Iterator for CssTokenizer {
                     self.pos -= 1;
                     t
                 }
-
-
                 _ => {
-                    unimplemnted!("char {} is not implemented yet", c);
+                    unimplemented!("char {} is not implemented yet", c);
                 }
             };
 
+            // 次の文字へ移動
             self.pos += 1;
             return Some(token);
         }
