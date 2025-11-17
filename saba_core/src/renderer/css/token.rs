@@ -259,4 +259,58 @@ mod tests {
             assert_eq!(Some(e), t.next());
         }
     }
+
+    // クラスセレクタを持つルールのテスト
+    #[test]
+    fn test_class_selector() {
+        let style = ".class { color: red; }".to_string();
+        let mut t = CssTokenizer::new(style);
+        let expected = [
+            CssToken::Delim('.'),
+            CssToken::Ident("class".to_string()),
+            CssToken::OpenCurly,
+            CssToken::Ident("color".to_string()),
+            CssToken::Colon,
+            CssToken::Ident("red".to_string()),
+            CssToken::SemiColon,
+            CssToken::CloseCurly,
+        ];
+
+        for e in expected {
+            assert_eq!(Some(e), t.next());
+        }
+    }
+
+    // 複数のルールのテスト
+    #[test]
+    fn test_multiple_rules() {
+        let style = "p { content: \"Hey\"; } h1 { font-size: 40; color: blue; }".to_string();
+        let mut t = CssTokenizer::new(style);
+        let expected = [
+            CssToken::Ident("p".to_string()),
+            CssToken::OpenCurly,
+            CssToken::Ident("content".to_string()),
+            CssToken::Colon,
+            CssToken::StringToken("Hey".to_string()),
+            CssToken::SemiColon,
+            CssToken::CloseCurly,
+            CssToken::Ident("h1".to_string()),
+            CssToken::OpenCurly,
+            CssToken::Ident("font-size".to_string()),
+            CssToken::Colon,
+            CssToken::Number(40.0),
+            CssToken::SemiColon,
+            CssToken::Ident("color".to_string()),
+            CssToken::Colon,
+            CssToken::Ident("blue".to_string()),
+            CssToken::SemiColon,
+            CssToken::CloseCurly,
+        ];
+
+        for e in expected {
+            assert_eq!(Some(e), t.next());
+        }
+
+        assert!(t.next().is_none());
+    }
 }
