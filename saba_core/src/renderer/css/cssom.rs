@@ -284,7 +284,7 @@ pub enum Selector {
     UnknownSelector,
 }
 
-// 宣言ノード（Decralation）
+// 宣言ノード（Declaration）
 // プロパティ（property）と値（value）のセット
 #[derive(Debug, Clone, PartialEq)]
 pub struct Declaration {
