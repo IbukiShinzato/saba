@@ -121,7 +121,6 @@ impl CssParser {
                 Selector::UnknownSelector
             }
             _ => {
-                self.t.next();
                 Selector::UnknownSelector
             }
         }
