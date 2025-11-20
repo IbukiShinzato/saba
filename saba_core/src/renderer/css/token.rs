@@ -177,7 +177,8 @@ impl Iterator for CssTokenizer {
                 '@' => {
                     // 次の3文字が識別子として有効な文字の場合、at-keyword-tokenトークンを作成して返す
                     // @media, @import, @font-faceなど
-                    if self.input[self.pos + 1].is_ascii_alphabetic()
+                    if self.pos + 3 < self.input.len()
+                        && self.input[self.pos + 1].is_ascii_alphabetic()
                         && self.input[self.pos + 2].is_ascii_alphabetic()
                         && self.input[self.pos + 3].is_ascii_alphabetic()
                     {
