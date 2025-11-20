@@ -107,16 +107,31 @@ impl CssParser {
             // a:active（クリックすると反応）などもある
             CssToken::Ident(ident) => {
                 if self.t.peek() == Some(&CssToken::Colon) {
-                    while self.t.peek() != Some(&CssToken::OpenCurly) {
+                    while let Some(token) = self.t.peek() {
+                        if token == &CssToken::OpenCurly {
+                            break;
+                        }
                         self.t.next();
+                    }
+                    // If we exited the loop and didn't find OpenCurly, input is malformed
+                    if self.t.peek() != Some(&CssToken::OpenCurly) {
+                        // Handle malformed input: return UnknownSelector or panic
+                        return Selector::UnknownSelector;
                     }
                 }
                 Selector::TypeSelector(ident.to_string())
             }
             CssToken::AtKeyword(_keyword) => {
                 // @から始まるルールを無視するために、宣言ブロックの開始直前までトークンを進める
-                while self.t.peek() != Some(&CssToken::OpenCurly) {
+                while let Some(token) = self.t.peek() {
+                    if token == &CssToken::OpenCurly {
+                        break;
+                    }
                     self.t.next();
+                }
+                // If we exited the loop and didn't find OpenCurly, input is malformed
+                if self.t.peek() != Some(&CssToken::OpenCurly) {
+                    return Selector::UnknownSelector;
                 }
                 Selector::UnknownSelector
             }
