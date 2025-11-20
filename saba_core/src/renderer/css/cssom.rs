@@ -44,7 +44,8 @@ impl CssParser {
             match token {
                 // AtKeywordトークンが出てきた場合、他のCSSをimportする@import、メディアクエリを表す@mediaなどのルールが始まることを表す
                 CssToken::AtKeyword(_keyword) => {
-                    let _rule = self.consume_qualified_rule();
+                    // Skip AtKeyword rules (e.g., @import, @media) by consuming them
+                    self.consume_qualified_rule();
                 }
                 _ => {
                     // １つのルールを解釈し、ベクタに追加する
