@@ -4,26 +4,28 @@ use alloc::vec::Vec;
 #[derive(Debug, Clone, PartialEq)]
 pub enum CssToken {
     HashToken(String),
-    Delim(char),
+    Delim(char), // 区切り　',' '.'　など
     Number(f64),
-    Colon,
-    Semicolon,
-    OpenParenthesis,
-    CloseParenthesis,
-    OpenCurly,
-    CloseCurly,
+    Colon, // コロン　':'
+    SemiColon, // セミコロン　';'
+    OpenParenthesis, // 丸括弧（開き）　'('
+    CloseParenthesis, // 丸括弧（閉じ）　')'
+    OpenCurly, // 波括弧（開き）　'{'
+    CloseCurly, // 波括弧（閉じ）　'}'
     Ident(String),
-    StoryToken(String);
-    AtKeyword()
+    // 文字列トークン
+    StringToken(String),
+    AtKeyword(String),
 }
 
-#[device(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CssTokenizer {
     pos: usize,
     input: Vec<char>,
 }
 
 impl CssTokenizer {
+    // コンストラクタ
     pub fn new(css: String) -> Self {
         Self {
             pos: 0,
@@ -41,14 +43,11 @@ impl CssTokenizer {
             self.pos += 1;
             let c = self.input[self.pos];
             match c {
-                '"' | '\'' => {
-                    break;
-                }
-                _ => {
-                    s.push(c);
-                }
+                '"' | '\'' => break,
+                _ => s.push(c),
             }
         }
+        s
     }
 
     // 数字の文字列をf64で返す
@@ -66,7 +65,7 @@ impl CssTokenizer {
             match c {
                 '0'..='9' => {
                     if floating {
-                        ffloating_digit *= 1f64 / 10f64;
+                        floating_digit *= 1f64 / 10f64;
                         num += (c.to_digit(10).unwrap() as f64) * floating_digit
                     } else {
                         num = num * 10.0 + (c.to_digit(10).unwrap() as f64);
@@ -110,34 +109,39 @@ impl CssTokenizer {
 impl Iterator for CssTokenizer {
     type Item = CssToken;
 
+    // 入力のCSS文字列の1文字ずつ見ていく
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if self.pos >= self.input.len() {
                 return None;
             }
-            
+
+            // 1文字とる
             let c = self.input[self.pos];
 
             let token = match c {
                 '(' => CssToken::OpenParenthesis,
                 ')' => CssToken::CloseParenthesis,
-                ',' => cssToken::Delim(','),
+                ',' => CssToken::Delim(','),
                 '.' => CssToken::Delim('.'),
                 ':' => CssToken::Colon,
-                ';' => CssToken::Semicolon,
+                ';' => CssToken::SemiColon,
                 '{' => CssToken::OpenCurly,
                 '}' => CssToken::CloseCurly,
-                ' ' | '\n' => { // 今は一時的に空文字と改行をスキップ
+                ' ' | '\n' => {
+                    // 今は一時的に空文字と改行をスキップ
                     self.pos += 1;
                     continue;
                 }
                 '"' | '\'' => {
+                    // 次のクォーテーションが来るまで入力を文字として解釈
                     let value = self.consume_string_token();
                     CssToken::StringToken(value)
                 }
                 '0'..='9' => {
                     let t = CssToken::Number(self.consume_numeric_token());
-                    self.pos -= 1; // 数字の次の文字まで進んでいるので1つ戻す
+                    self.pos -= 1;
+                    // 数字の次の文字まで進んでいるので1つ戻す
                     t
                 }
                 '#' => {
@@ -146,7 +150,7 @@ impl Iterator for CssTokenizer {
                     CssToken::HashToken(value)
                 }
                 '_' => {
-                    let t = self.consume_ident_token();
+                    let t = CssToken::Ident(self.consume_ident_token());
                     self.pos -= 1;
                     t
                 }
@@ -171,12 +175,120 @@ impl Iterator for CssTokenizer {
 
 
                 _ => {
-                    unimplemnted!("char {} is not implemented yet", c);
+                    unimplemented!("char {} is not implemented yet", c);
                 }
             };
 
+            // 次の文字へ移動
             self.pos += 1;
             return Some(token);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::string::ToString;
+
+    // 空文字ではないかテスト
+    #[test]
+    fn test_empty() {
+        let style = "".to_string();
+        let mut t = CssTokenizer::new(style);
+        assert!(t.next().is_none());
+    }
+
+    // p { color: red; }のときにそれぞれのトークンが合っているかを確認
+    #[test]
+        fn test_one_rule() {
+            let style = "p { color: red; }".to_string();
+            let mut t = CssTokenizer::new(style);
+            // 実行例
+            let expected = [
+                CssToken::Ident("p".to_string()),
+                CssToken::OpenCurly,
+                CssToken::Ident("color".to_string()),
+                CssToken::Colon,
+                CssToken::Ident("red".to_string()),
+                CssToken::SemiColon,
+                CssToken::CloseCurly,
+            ];
+            for e in expected {
+                assert_eq!(Some(e.clone()), t.next());
+            }
+            assert!(t.next().is_none());
+    }
+
+    // #id { color: red; }の時にそれぞれのトークンが合っているかを確認
+    #[test]
+    fn test_id_selector() {
+        let style = "#id { color: red; }".to_string();
+        let mut t = CssTokenizer::new(style);
+        let expected = [
+            CssToken::HashToken("#id".to_string()),
+            CssToken::OpenCurly,
+            CssToken::Ident("color".to_string()),
+            CssToken::Colon,
+            CssToken::Ident("red".to_string()),
+            CssToken::SemiColon,
+            CssToken::CloseCurly,
+        ];
+        for e in expected {
+            assert_eq!(Some(e.clone()), t.next());
+        }
+        assert!(t.next().is_none());
+    }
+
+    // .class { color: red; }の時にそれぞれのトークンが合っているかを確認
+    #[test]
+    fn test_class_selector() {
+        let style = ".class { color: red; }".to_string();
+        let mut t = CssTokenizer::new(style);
+        let expected = [
+            CssToken::Delim('.'),
+            CssToken::Ident("class".to_string()),
+            CssToken::OpenCurly,
+            CssToken::Ident("color".to_string()),
+            CssToken::Colon,
+            CssToken::Ident("red".to_string()),
+            CssToken::SemiColon,
+            CssToken::CloseCurly,
+        ];
+        for e in expected {
+            assert_eq!(Some(e.clone()), t.next());
+        }
+        assert!(t.next().is_none());
+    }
+
+    // p { content: \"Hey\"; } h1 { font-size: 40; color: blue; }の時にそれぞれのトークンが合っているかを確認
+    #[test]
+    fn test_multiple_rules() {
+        let style = "p { content: \"Hey\"; } h1 { font-size: 40; color: blue; }".to_string();
+        let mut t = CssTokenizer::new(style);
+        let expected = [
+            CssToken::Ident("p".to_string()),
+            CssToken::OpenCurly,
+            CssToken::Ident("content".to_string()),
+            CssToken::Colon,
+            CssToken::StringToken("Hey".to_string()),
+            CssToken::SemiColon,
+            CssToken::CloseCurly,
+            CssToken::Ident("h1".to_string()),
+            CssToken::OpenCurly,
+            CssToken::Ident("font-size".to_string()),
+            CssToken::Colon,
+            CssToken::Number(40.0),
+            CssToken::SemiColon,
+            CssToken::Ident("color".to_string()),
+            CssToken::Colon,
+            CssToken::Ident("blue".to_string()),
+            CssToken::SemiColon,
+            CssToken::CloseCurly,
+        ];
+        for e in expected {
+            assert_eq!(Some(e.clone()), t.next());
+        }
+        assert!(t.next().is_none());
     }
 }
