@@ -3,30 +3,18 @@ use alloc::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CssToken {
-    // ハッシュトークン
-    HashToken(String),
-    // 区切り　',' '.'　など
-    Delim(char),
-    // 数字トークン
-    Number(f64),
-    // コロン　':'
-    Colon,
-    // セミコロン　';'
-    SemiColon,
-    // 丸括弧（開き）　'('
-    OpenParenthesis,
-    // 丸括弧（閉じ）　')'
-    CloseParenthesis,
-    // 波括弧（開き）　'{'
-    OpenCurly,
-    // 波括弧（閉じ）　'}'
-    CloseCurly,
-    // 識別子トークン
-    Ident(String),
-    // 文字列トークン
-    StringToken(String),
-    // アットキーワードトークン
-    AtKeyword(String),
+    HashToken(String), // ハッシュトークン
+    Delim(char), // 区切り　',' '.'　など
+    Number(f64), // 数字トークン
+    Colon, // コロン　':'
+    SemiColon, // セミコロン　';'
+    OpenParenthesis, // 丸括弧（開き）　'('
+    CloseParenthesis, // 丸括弧（閉じ）　')'
+    OpenCurly, // 波括弧（開き）　'{'
+    CloseCurly, // 波括弧（閉じ）　'}'
+    Ident(String), // 識別子トークン
+    StringToken(String), // 文字列トークン
+    AtKeyword(String), // アットキーワードトークン
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -57,12 +45,9 @@ impl CssTokenizer {
             let c = self.input[self.pos];
             match c {
                 '"' | '\'' => break,
-                _ => {
-                    s.push(c);
-                }
+                _ => s.push(c),
             }
         }
-
         s
     }
 
@@ -161,6 +146,7 @@ impl Iterator for CssTokenizer {
                     let t = CssToken::Number(self.consume_numeric_token());
                     // 数字の次の文字まで進んでいるので1つ戻す
                     self.pos -= 1;
+
                     t
                 }
                 '#' => {
@@ -212,7 +198,7 @@ mod tests {
     use super::*;
     use alloc::string::ToString;
 
-    // 空文字のテスト
+    // 空文字ではないかテスト
     #[test]
     fn test_empty() {
         let style = "".to_string();
@@ -220,28 +206,28 @@ mod tests {
         assert!(t.next().is_none());
     }
 
-    // １つのルールのテスト
-    // 今回はpタグ
+    // p { color: red; }のときにそれぞれのトークンが合っているかを確認
     #[test]
-    fn test_one_rule() {
-        let style = "p { color: red; }".to_string();
-        let mut t = CssTokenizer::new(style);
-        let expected = [
-            CssToken::Ident("p".to_string()),
-            CssToken::OpenCurly,
-            CssToken::Ident("color".to_string()),
-            CssToken::Colon,
-            CssToken::Ident("red".to_string()),
-            CssToken::SemiColon,
-            CssToken::CloseCurly,
-        ];
-
-        for e in expected {
-            assert_eq!(Some(e), t.next());
-        }
+        fn test_one_rule() {
+            let style = "p { color: red; }".to_string();
+            let mut t = CssTokenizer::new(style);
+            // 実行例
+            let expected = [
+                CssToken::Ident("p".to_string()),
+                CssToken::OpenCurly,
+                CssToken::Ident("color".to_string()),
+                CssToken::Colon,
+                CssToken::Ident("red".to_string()),
+                CssToken::SemiColon,
+                CssToken::CloseCurly,
+            ];
+            for e in expected {
+                assert_eq!(Some(e.clone()), t.next());
+            }
+            assert!(t.next().is_none());
     }
 
-    // IDセレクタを持つルールのテスト
+    // #id { color: red; }の時にそれぞれのトークンが合っているかを確認
     #[test]
     fn test_id_selector() {
         let style = "#id { color: red; }".to_string();
@@ -255,13 +241,13 @@ mod tests {
             CssToken::SemiColon,
             CssToken::CloseCurly,
         ];
-
         for e in expected {
-            assert_eq!(Some(e), t.next());
+            assert_eq!(Some(e.clone()), t.next());
         }
+        assert!(t.next().is_none());
     }
 
-    // クラスセレクタを持つルールのテスト
+    // .class { color: red; }の時にそれぞれのトークンが合っているかを確認
     #[test]
     fn test_class_selector() {
         let style = ".class { color: red; }".to_string();
@@ -276,13 +262,13 @@ mod tests {
             CssToken::SemiColon,
             CssToken::CloseCurly,
         ];
-
         for e in expected {
-            assert_eq!(Some(e), t.next());
+            assert_eq!(Some(e.clone()), t.next());
         }
+        assert!(t.next().is_none());
     }
 
-    // 複数のルールのテスト
+    // p { content: \"Hey\"; } h1 { font-size: 40; color: blue; }の時にそれぞれのトークンが合っているかを確認
     #[test]
     fn test_multiple_rules() {
         let style = "p { content: \"Hey\"; } h1 { font-size: 40; color: blue; }".to_string();
@@ -307,11 +293,9 @@ mod tests {
             CssToken::SemiColon,
             CssToken::CloseCurly,
         ];
-
         for e in expected {
-            assert_eq!(Some(e), t.next());
+            assert_eq!(Some(e.clone()), t.next());
         }
-
         assert!(t.next().is_none());
     }
 }
