@@ -89,9 +89,9 @@ impl HtmlParser {
         // 現在参照しているノードにすでに子要素がある場合
         if current.borrow().first_child().is_some() {
             // 最後の兄弟ノードを探索
-            let mut last_sibiling = current.borrow().first_child();
+            let mut last_sibling = current.borrow().first_child();
             loop {
-                last_sibiling = match last_sibiling {
+                last_sibling = match last_sibling {
                     Some(ref node) => {
                         if node.borrow().next_sibling().is_some() {
                             node.borrow().next_sibling()
@@ -99,21 +99,19 @@ impl HtmlParser {
                             break;
                         }
                     }
-                    None => unimplemented!("last_sibiling should be Some"),
+                    None => unimplemented!("last_sibling should be Some"),
                 }
             }
 
             // 新しいノードを最後の直後に挿入
-            last_sibiling
+            last_sibling
+                .as_ref()
                 .unwrap()
                 .borrow_mut()
                 .set_next_sibling(Some(node.clone()));
 
             node.borrow_mut().set_previous_sibling(Rc::downgrade(
-                &current
-                    .borrow()
-                    .first_child()
-                    .expect("failed to get a first child"),
+                &last_sibling.expect("last_sibling should be Some"),
             ));
         } else {
             // 兄弟ノードが存在しない場合は新しいノードを現在参照しているノードの最初の子要素に設定する
@@ -176,7 +174,8 @@ impl HtmlParser {
 
     // 新しいテキストノードを作成
     fn create_char(&self, c: char) -> Node {
-        let s = String::from(c);
+        let mut s = String::new();
+        s.push(c);
         Node::new(NodeKind::Text(s))
     }
 
@@ -209,12 +208,12 @@ impl HtmlParser {
                 .unwrap()
                 .borrow_mut()
                 .set_next_sibling(Some(node.clone()));
-            node.borrow_mut().set_previous_sibling(Rc::downgrade(
-                &current
-                    .borrow()
-                    .first_child()
-                    .expect("failed to get a first child"),
-            ));
+            // node.borrow_mut().set_previous_sibling(Rc::downgrade(
+            //     &current
+            //         .borrow()
+            //         .first_child()
+            //         .expect("failed to get a first child"),
+            // ));
         } else {
             // 新しいテキストノードを現在参照しているノードの最初の子要素として設定する
             current.borrow_mut().set_first_child(Some(node.clone()));
@@ -245,6 +244,9 @@ impl HtmlParser {
                         token = self.t.next();
                         continue;
                     }
+
+                    self.mode = InsertionMode::BeforeHtml;
+                    continue;
                 }
 
                 // <html>の開始タグを取り扱う
@@ -580,6 +582,7 @@ impl HtmlParser {
 mod tests {
     use super::*;
     use crate::alloc::string::ToString;
+    use alloc::vec;
 
     // 空文字のテスト
     // DOMツリーのルートにNodeKind::Documentを持つ
@@ -649,6 +652,7 @@ mod tests {
         );
     }
 
+    // <thml>タグ、<head>タグ、<body>タグ、textを含む文字列のテスト
     #[test]
     fn test_text() {
         let html = "<html><head></head><body>text</body></html>".to_string();
@@ -662,16 +666,116 @@ mod tests {
             document
         );
 
+        // その子供のノードはhtmlのNodeKind::Elementであるか
         let html = document
             .borrow()
             .first_child()
             .expect("failetd to get a first child of document");
         assert_eq!(
             Rc::new(RefCell::new(Node::new(NodeKind::Element(Element::new(
-                "body",
+                "html",
                 Vec::new()
             ))))),
             html
+        );
+
+        // さらにその子供のノードはbodyのNodeKind::Elementであるか
+        let body = html
+            .borrow()
+            .first_child()
+            .expect("failed to get a first child of document")
+            .borrow()
+            .next_sibling()
+            .expect("failed to get a next sibling of head");
+        assert_eq!(
+            Rc::new(RefCell::new(Node::new(NodeKind::Element(Element::new(
+                "body",
+                Vec::new()
+            ))))),
+            body
+        );
+
+        // さらにその子供のノードはtextの文字列であるか
+        let text = body
+            .borrow()
+            .first_child()
+            .expect("failed to get a first child of document");
+        assert_eq!(
+            Rc::new(RefCell::new(Node::new(NodeKind::Text("text".to_string())))),
+            text
+        );
+    }
+
+    // <thml>タグ、<head>タグ、<body>タグ、<p>タグ、<a>タグ、textを含む文字列のテスト
+    #[test]
+    fn test_multiple_nodes() {
+        let html = "<html><head></head><body><p><a foo=bar>text</a></p></body></html>".to_string();
+        let t = HtmlTokenizer::new(html);
+        let window = HtmlParser::new(t).construct_tree();
+        let document = window.borrow().document(); // ルートノード
+
+        // bodyのNodeKind::Elementであるか
+        let body = document
+            .borrow()
+            .first_child() // <html>
+            .expect("failed to get a first child of document")
+            .borrow()
+            .first_child() // head>
+            .expect("failed to get a first child of document") 
+            .borrow()
+            .next_sibling() // <body>
+            .expect("failed to get a next sibling of head"); 
+        assert_eq!(
+            Rc::new(RefCell::new(Node::new(NodeKind::Element(Element::new(
+                "body",
+                Vec::new()
+            ))))),
+            body
+        );
+
+        // その子供のノードはpのNodeKind::Elementであるか
+        let p = body
+            .borrow()
+            .first_child()
+            .expect("failed to get a first child of body");
+        assert_eq!(
+            Rc::new(RefCell::new(Node::new(NodeKind::Element(Element::new(
+                "p",
+                Vec::new()
+            ))))),
+            p
+        );
+
+        // さらにその子供のノードはaのNodeKind::Elementであるか
+        let mut attr = Attribute::new();
+        // nameにfoo、valueにbarをpush
+        attr.add_char('f', true);
+        attr.add_char('o', true);
+        attr.add_char('o', true);
+        attr.add_char('b', false);
+        attr.add_char('a', false);
+        attr.add_char('r', false);
+        // pの子供のノードはaのNodeKind::Elementであるか
+        let a = p
+            .borrow()
+            .first_child()
+            .expect("failed to get a first child of p");
+        assert_eq!(
+            Rc::new(RefCell::new(Node::new(NodeKind::Element(Element::new(
+                "a",
+                vec![attr] // foo=bar
+            ))))),
+            a
+        );
+
+        // その子供のノードはtextであるか
+        let text = a
+            .borrow()
+            .first_child()
+            .expect("failed to get a first child of a");
+        assert_eq!(
+            Rc::new(RefCell::new(Node::new(NodeKind::Text("text".to_string())))),
+            text
         );
     }
 }
