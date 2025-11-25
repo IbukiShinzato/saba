@@ -3,19 +3,18 @@ use alloc::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CssToken {
-    HashToken(String),
-    Delim(char), // 区切り　',' '.'　など
-    Number(f64),
-    Colon, // コロン　':'
-    SemiColon, // セミコロン　';'
-    OpenParenthesis, // 丸括弧（開き）　'('
-    CloseParenthesis, // 丸括弧（閉じ）　')'
-    OpenCurly, // 波括弧（開き）　'{'
-    CloseCurly, // 波括弧（閉じ）　'}'
-    Ident(String),
-    // 文字列トークン
-    StringToken(String),
-    AtKeyword(String),
+    HashToken(String),   // ハッシュトークン
+    Delim(char),         // 区切り　',' '.'　など
+    Number(f64),         // 数字トークン
+    Colon,               // コロン　':'
+    SemiColon,           // セミコロン　';'
+    OpenParenthesis,     // 丸括弧（開き）　'('
+    CloseParenthesis,    // 丸括弧（閉じ）　')'
+    OpenCurly,           // 波括弧（開き）　'{'
+    CloseCurly,          // 波括弧（閉じ）　'}'
+    Ident(String),       // 識別子トークン
+    StringToken(String), // 文字列トークン
+    AtKeyword(String),   // アットキーワードトークン
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -32,6 +31,7 @@ impl CssTokenizer {
             input: css.chars().collect(),
         }
     }
+
     // もう一度"や'が出てくるまで、文字列を消費
     fn consume_string_token(&mut self) -> String {
         let mut s = String::new();
@@ -40,6 +40,7 @@ impl CssTokenizer {
             if self.pos >= self.input.len() {
                 return s;
             }
+
             self.pos += 1;
             let c = self.input[self.pos];
             match c {
@@ -64,10 +65,12 @@ impl CssTokenizer {
             let c = self.input[self.pos];
             match c {
                 '0'..='9' => {
+                    // 小数なら
                     if floating {
-                        floating_digit *= 1f64 / 10f64;
+                        floating_digit *= 1f64 / 10f64; // 0.1
                         num += (c.to_digit(10).unwrap() as f64) * floating_digit
                     } else {
+                        // 末尾の桁を一つ左にずらす　xx1 => xx1x
                         num = num * 10.0 + (c.to_digit(10).unwrap() as f64);
                     }
                     self.pos += 1;
@@ -77,7 +80,7 @@ impl CssTokenizer {
                     floating = true;
                     self.pos += 1;
                 }
-                
+
                 _ => {
                     break;
                 }
@@ -86,6 +89,7 @@ impl CssTokenizer {
         num
     }
 
+    // 文字、数字、ハイフン(-)、アンダースコア(_)が出続けている間は識別子として扱う
     fn consume_ident_token(&mut self) -> String {
         let mut s = String::new();
         s.push(self.input[self.pos]);
@@ -140,8 +144,9 @@ impl Iterator for CssTokenizer {
                 }
                 '0'..='9' => {
                     let t = CssToken::Number(self.consume_numeric_token());
-                    self.pos -= 1;
                     // 数字の次の文字まで進んでいるので1つ戻す
+                    self.pos -= 1;
+
                     t
                 }
                 '#' => {
@@ -149,13 +154,17 @@ impl Iterator for CssTokenizer {
                     self.pos -= 1;
                     CssToken::HashToken(value)
                 }
-                '_' => {
+                '-' => {
+                    // 負の数は取り扱わないので、識別子の一つとして扱う
                     let t = CssToken::Ident(self.consume_ident_token());
                     self.pos -= 1;
                     t
                 }
                 '@' => {
-                    if self.input[self.pos + 1].is_ascii_alphabetic()
+                    // 次の3文字が識別子として有効な文字の場合、at-keyword-tokenトークンを作成して返す
+                    // @media, @import, @font-faceなど
+                    if self.pos + 3 < self.input.len()
+                        && self.input[self.pos + 1].is_ascii_alphabetic()
                         && self.input[self.pos + 2].is_ascii_alphabetic()
                         && self.input[self.pos + 3].is_ascii_alphabetic()
                     {
@@ -167,13 +176,11 @@ impl Iterator for CssTokenizer {
                         CssToken::Delim('@')
                     }
                 }
-                'a'..='z' | 'A'..='Z' | '-' => {
+                'a'..='z' | 'A'..='Z' | '_' => {
                     let t = CssToken::Ident(self.consume_ident_token());
                     self.pos -= 1;
                     t
                 }
-
-
                 _ => {
                     unimplemented!("char {} is not implemented yet", c);
                 }
@@ -201,23 +208,23 @@ mod tests {
 
     // p { color: red; }のときにそれぞれのトークンが合っているかを確認
     #[test]
-        fn test_one_rule() {
-            let style = "p { color: red; }".to_string();
-            let mut t = CssTokenizer::new(style);
-            // 実行例
-            let expected = [
-                CssToken::Ident("p".to_string()),
-                CssToken::OpenCurly,
-                CssToken::Ident("color".to_string()),
-                CssToken::Colon,
-                CssToken::Ident("red".to_string()),
-                CssToken::SemiColon,
-                CssToken::CloseCurly,
-            ];
-            for e in expected {
-                assert_eq!(Some(e.clone()), t.next());
-            }
-            assert!(t.next().is_none());
+    fn test_one_rule() {
+        let style = "p { color: red; }".to_string();
+        let mut t = CssTokenizer::new(style);
+        // 実行例
+        let expected = [
+            CssToken::Ident("p".to_string()),
+            CssToken::OpenCurly,
+            CssToken::Ident("color".to_string()),
+            CssToken::Colon,
+            CssToken::Ident("red".to_string()),
+            CssToken::SemiColon,
+            CssToken::CloseCurly,
+        ];
+        for e in expected {
+            assert_eq!(Some(e.clone()), t.next());
+        }
+        assert!(t.next().is_none());
     }
 
     // #id { color: red; }の時にそれぞれのトークンが合っているかを確認

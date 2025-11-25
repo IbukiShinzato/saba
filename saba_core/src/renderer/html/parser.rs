@@ -721,10 +721,10 @@ mod tests {
             .expect("failed to get a first child of document")
             .borrow()
             .first_child() // head>
-            .expect("failed to get a first child of document") 
+            .expect("failed to get a first child of document")
             .borrow()
             .next_sibling() // <body>
-            .expect("failed to get a next sibling of head"); 
+            .expect("failed to get a next sibling of head");
         assert_eq!(
             Rc::new(RefCell::new(Node::new(NodeKind::Element(Element::new(
                 "body",
