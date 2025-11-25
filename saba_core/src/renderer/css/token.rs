@@ -3,18 +3,18 @@ use alloc::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CssToken {
-    HashToken(String), // ハッシュトークン
-    Delim(char), // 区切り　',' '.'　など
-    Number(f64), // 数字トークン
-    Colon, // コロン　':'
-    SemiColon, // セミコロン　';'
-    OpenParenthesis, // 丸括弧（開き）　'('
-    CloseParenthesis, // 丸括弧（閉じ）　')'
-    OpenCurly, // 波括弧（開き）　'{'
-    CloseCurly, // 波括弧（閉じ）　'}'
-    Ident(String), // 識別子トークン
+    HashToken(String),   // ハッシュトークン
+    Delim(char),         // 区切り　',' '.'　など
+    Number(f64),         // 数字トークン
+    Colon,               // コロン　':'
+    SemiColon,           // セミコロン　';'
+    OpenParenthesis,     // 丸括弧（開き）　'('
+    CloseParenthesis,    // 丸括弧（閉じ）　')'
+    OpenCurly,           // 波括弧（開き）　'{'
+    CloseCurly,          // 波括弧（閉じ）　'}'
+    Ident(String),       // 識別子トークン
     StringToken(String), // 文字列トークン
-    AtKeyword(String), // アットキーワードトークン
+    AtKeyword(String),   // アットキーワードトークン
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -208,23 +208,23 @@ mod tests {
 
     // p { color: red; }のときにそれぞれのトークンが合っているかを確認
     #[test]
-        fn test_one_rule() {
-            let style = "p { color: red; }".to_string();
-            let mut t = CssTokenizer::new(style);
-            // 実行例
-            let expected = [
-                CssToken::Ident("p".to_string()),
-                CssToken::OpenCurly,
-                CssToken::Ident("color".to_string()),
-                CssToken::Colon,
-                CssToken::Ident("red".to_string()),
-                CssToken::SemiColon,
-                CssToken::CloseCurly,
-            ];
-            for e in expected {
-                assert_eq!(Some(e.clone()), t.next());
-            }
-            assert!(t.next().is_none());
+    fn test_one_rule() {
+        let style = "p { color: red; }".to_string();
+        let mut t = CssTokenizer::new(style);
+        // 実行例
+        let expected = [
+            CssToken::Ident("p".to_string()),
+            CssToken::OpenCurly,
+            CssToken::Ident("color".to_string()),
+            CssToken::Colon,
+            CssToken::Ident("red".to_string()),
+            CssToken::SemiColon,
+            CssToken::CloseCurly,
+        ];
+        for e in expected {
+            assert_eq!(Some(e.clone()), t.next());
+        }
+        assert!(t.next().is_none());
     }
 
     // #id { color: red; }の時にそれぞれのトークンが合っているかを確認
