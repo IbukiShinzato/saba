@@ -6,8 +6,6 @@ extern crate alloc;
 use crate::alloc::string::ToString;
 use net_wasabi::http::HttpClient;
 use noli::prelude::*;
-
-use crate::alloc::string::String;
 use noli::*;
 use saba_core::browser::Browser;
 use saba_core::http::HttpResponse;
@@ -57,11 +55,10 @@ fn main() -> u64 {
     let response =
         HttpResponse::new(TEST_HTTP_RESPONSE.to_string()).expect("failed to parse http response");
     let page = browser.borrow().current_page();
-    let dom_string = page.borrow_mut().receive_response(response);
+    page.borrow_mut().receive_response(response);
 
-    for log in dom_string.lines() {
-        println!("{}", log);
-    }
+    println!();
+    println!("page: {:?}", page);
 
     0
 }
