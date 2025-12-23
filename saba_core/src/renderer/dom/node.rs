@@ -33,6 +33,12 @@ impl Window {
     }
 }
 
+impl Default for Window {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Node {
     // ノードの種類
@@ -193,12 +199,16 @@ impl Element {
         self.kind
     }
 
+    pub fn attributes(&self) -> Vec<Attribute> {
+        self.attributes.clone()
+    }
+
     // 要素がデフォルトでブロック要素かインライン要素かを決める
     pub fn is_block_element(&self) -> bool {
-        match self.kind {
-            ElementKind::Body | ElementKind::H1 | ElementKind::H2 | ElementKind::P => true,
-            _ => false,
-        }
+        matches!(
+            self.kind,
+            ElementKind::Body | ElementKind::H1 | ElementKind::H2 | ElementKind::P
+        )
     }
 }
 

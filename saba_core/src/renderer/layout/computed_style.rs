@@ -7,16 +7,15 @@ use alloc::rc::Rc;
 use alloc::string::String;
 use alloc::string::ToString;
 use core::cell::RefCell;
+use core::str::FromStr;
 
-// 計算値を表す構造体
-// Task: これ以外のCSSのプロパティの実装
 #[derive(Debug, Clone, PartialEq)]
 pub struct ComputedStyle {
     background_color: Option<Color>,
     color: Option<Color>,
     display: Option<DisplayType>,
     font_size: Option<FontSize>,
-    text_decoration: Option<TextDecoretaion>,
+    text_decoration: Option<TextDecoration>,
     height: Option<f64>,
     width: Option<f64>,
 }
@@ -31,6 +30,50 @@ impl ComputedStyle {
             text_decoration: None,
             height: None,
             width: None,
+        }
+    }
+
+    pub fn defaulting(&mut self, node: &Rc<RefCell<Node>>, parent_style: Option<ComputedStyle>) {
+        // もし親ノードが存在し、親のCSSの値が初期値とは異なる場合、値を継承する
+        if let Some(parent_style) = parent_style {
+            if self.background_color.is_none() && parent_style.background_color() != Color::white()
+            {
+                self.background_color = Some(parent_style.background_color());
+            }
+            if self.color.is_none() && parent_style.color() != Color::black() {
+                self.color = Some(parent_style.color());
+            }
+            if self.font_size.is_none() && parent_style.font_size() != FontSize::Medium {
+                self.font_size = Some(parent_style.font_size());
+            }
+            if self.text_decoration.is_none()
+                && parent_style.text_decoration() != TextDecoration::None
+            {
+                self.text_decoration = Some(parent_style.text_decoration());
+            }
+        }
+
+        // 各プロパティに対して、初期値を設定する
+        if self.background_color.is_none() {
+            self.background_color = Some(Color::white());
+        }
+        if self.color.is_none() {
+            self.color = Some(Color::black());
+        }
+        if self.display.is_none() {
+            self.display = Some(DisplayType::default(node));
+        }
+        if self.font_size.is_none() {
+            self.font_size = Some(FontSize::default(node));
+        }
+        if self.text_decoration.is_none() {
+            self.text_decoration = Some(TextDecoration::default(node));
+        }
+        if self.height.is_none() {
+            self.height = Some(0.0);
+        }
+        if self.width.is_none() {
+            self.width = Some(0.0);
         }
     }
 
@@ -73,7 +116,7 @@ impl ComputedStyle {
             .expect("failed to access CSS property: text_decoration")
     }
 
-    pub fn set_height(&self, height: f64) {
+    pub fn set_height(&mut self, height: f64) {
         self.height = Some(height);
     }
 
@@ -90,17 +133,19 @@ impl ComputedStyle {
     }
 }
 
-// CSSの色の値を表す構造体
-// 名前とカラーコードを表す値をフィールドに持つ
+impl Default for ComputedStyle {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Color {
     name: Option<String>,
     code: String,
 }
 
-// Task: 新しい色の実装
 impl Color {
-    // name -> color code
     pub fn from_name(name: &str) -> Result<Self, Error> {
         let code = match name {
             "black" => "#000000".to_string(),
@@ -123,7 +168,7 @@ impl Color {
             "lightgray" => "#d3d3d3".to_string(),
             _ => {
                 return Err(Error::UnexpectedInput(format!(
-                    "color name {:?} is not suppored yet",
+                    "color name {:?} is not supported yet",
                     name
                 )));
             }
@@ -135,9 +180,7 @@ impl Color {
         })
     }
 
-    // color code -> name
     pub fn from_code(code: &str) -> Result<Self, Error> {
-        //
         if code.chars().nth(0) != Some('#') || code.len() != 7 {
             return Err(Error::UnexpectedInput(format!(
                 "invalid color code {}",
@@ -145,40 +188,39 @@ impl Color {
             )));
         }
 
-        let name = match code.to_lowercase().as_str() {
-            "#000000" => "black",
-            "#c0c0c0" => "silver",
-            "#808080" => "gray",
-            "#ffffff" => "white",
-            "#800000" => "maroon",
-            "#ff0000" => "red",
-            "#800080" => "purple",
-            "#ff00ff" => "fuchsia",
-            "#008000" => "green",
-            "#00ff00" => "lime",
-            "#808000" => "olive",
-            "#ffff00" => "yellow",
-            "#000080" => "navy",
-            "#0000ff" => "blue",
-            "#008080" => "teal",
-            "#00ffff" => "aqua",
-            "#ffa500" => "orange",
-            "#d3d3d3" => "lightgray",
+        let name = match code {
+            "#000000" => "black".to_string(),
+            "#c0c0c0" => "silver".to_string(),
+            "#808080" => "gray".to_string(),
+            "#ffffff" => "white".to_string(),
+            "#800000" => "maroon".to_string(),
+            "#ff0000" => "red".to_string(),
+            "#800080" => "purple".to_string(),
+            "#ff00ff" => "fuchsia".to_string(),
+            "#008000" => "green".to_string(),
+            "#00ff00" => "lime".to_string(),
+            "#808000" => "olive".to_string(),
+            "#ffff00" => "yellow".to_string(),
+            "#000080" => "navy".to_string(),
+            "#0000ff" => "blue".to_string(),
+            "#008080" => "teal".to_string(),
+            "#00ffff" => "aqua".to_string(),
+            "#ffa500" => "orange".to_string(),
+            "#d3d3d3" => "lightgray".to_string(),
             _ => {
                 return Err(Error::UnexpectedInput(format!(
-                    "color code {} is not supported yet",
+                    "color code {:?} is not supported yet",
                     code
                 )));
             }
         };
 
         Ok(Self {
-            name: Some(name.to_string()),
+            name: Some(name),
             code: code.to_string(),
         })
     }
 
-    // whiteを表すColorオブジェクトを生成
     pub fn white() -> Self {
         Self {
             name: Some("white".to_string()),
@@ -186,7 +228,6 @@ impl Color {
         }
     }
 
-    // blackを表すColorオブジェクトを生成
     pub fn black() -> Self {
         Self {
             name: Some("black".to_string()),
@@ -194,15 +235,12 @@ impl Color {
         }
     }
 
-    // color code を u32型で返す
     pub fn code_u32(&self) -> u32 {
-        // '#'は取り除いてu32に変換
-        u32::from_str_radix(self.code.trim_matches('#'), 16).unwrap()
+        u32::from_str_radix(self.code.trim_start_matches('#'), 16).unwrap()
     }
 }
 
-// 文字の大きさを表す列挙型
-// h1がXXLarge, h2がXLarge, 通常の文字がMedium
+/// https://www.w3.org/TR/css-fonts-4/#absolute-size-mapping
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum FontSize {
     Medium,
@@ -223,11 +261,13 @@ impl FontSize {
     }
 }
 
-// CSSの displayプロパティに対応する値を表す
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum DisplayType {
+    /// https://www.w3.org/TR/css-display-3/#valdef-display-block
     Block,
+    /// https://www.w3.org/TR/css-display-3/#valdef-display-inline
     Inline,
+    /// https://www.w3.org/TR/css-display-3/#valdef-display-none
     DisplayNone,
 }
 
@@ -243,6 +283,40 @@ impl DisplayType {
                 }
             }
             NodeKind::Text(_) => DisplayType::Inline,
+        }
+    }
+}
+
+impl FromStr for DisplayType {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "block" => Ok(Self::Block),
+            "inline" => Ok(Self::Inline),
+            "none" => Ok(Self::DisplayNone),
+            _ => Err(Error::UnexpectedInput(format!(
+                "display {:?} is not supported yet",
+                s
+            ))),
+        }
+    }
+}
+
+/// https://w3c.github.io/csswg-drafts/css-text-decor/#text-decoration-property
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum TextDecoration {
+    None,
+    Underline,
+}
+
+impl TextDecoration {
+    fn default(node: &Rc<RefCell<Node>>) -> Self {
+        match &node.borrow().kind() {
+            NodeKind::Element(element) => match element.kind() {
+                ElementKind::A => TextDecoration::Underline,
+                _ => TextDecoration::None,
+            },
+            _ => TextDecoration::None,
         }
     }
 }

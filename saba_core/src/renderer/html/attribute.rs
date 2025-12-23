@@ -32,3 +32,9 @@ impl Attribute {
         self.value.clone()
     }
 }
+
+impl Default for Attribute {
+    fn default() -> Self {
+        Self::new()
+    }
+}

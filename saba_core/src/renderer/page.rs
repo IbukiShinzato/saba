@@ -48,3 +48,9 @@ impl Page {
         self.frame = Some(frame);
     }
 }
+
+impl Default for Page {
+    fn default() -> Self {
+        Self::new()
+    }
+}
