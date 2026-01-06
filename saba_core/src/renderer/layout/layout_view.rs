@@ -104,11 +104,7 @@ impl LayoutView {
 
         tree
     }
-
-    pub fn root(&self) -> Option<Rc<RefCell<LayoutObject>>> {
-        self.root.clone()
-    }
-
+  
     // レイアウトツリーの各ノードのサイズと位置を計算する関数
     fn update_layout(&mut self) {
         Self::calculate_node_size(&self.root, LayoutSize::new(CONTENT_AREA_WIDTH, 0));
@@ -121,6 +117,11 @@ impl LayoutView {
             None,
         );
     }
+  
+      pub fn root(&self) -> Option<Rc<RefCell<LayoutObject>>> {
+        self.root.clone()
+    }
+
 
     // レイアウトツリーの各ノードのサイズを再帰的に計算する関数
     fn calculate_node_size(node: &Option<Rc<RefCell<LayoutObject>>>, parent_size: LayoutSize) {
