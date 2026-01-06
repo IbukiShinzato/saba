@@ -16,7 +16,7 @@ pub struct ComputedStyle {
     color: Option<Color>,
     display: Option<DisplayType>,
     font_size: Option<FontSize>,
-    text_decoration: Option<TextDecoretaion>,
+    text_decoration: Option<TextDecoration>,
     height: Option<f64>,
     width: Option<f64>,
 }
@@ -73,7 +73,7 @@ impl ComputedStyle {
             .expect("failed to access CSS property: text_decoration")
     }
 
-    pub fn set_height(&self, height: f64) {
+    pub fn set_height(&mut self, height: f64) {
         self.height = Some(height);
     }
 
@@ -87,6 +87,51 @@ impl ComputedStyle {
 
     pub fn width(&self) -> f64 {
         self.width.expect("failed to access CSS property: width")
+    }
+
+    pub fn defaulting(&mut self, node: &Rc<RefCell<Node>>, parent_style: Option<ComputedStyle>) {
+        // 親ノードが存在する場合
+        if let Some(parent_style) = parent_style {
+            // CSSの値が初期値と異なる場合、初期値を継承する
+            // バックグラウンドカラーが初期値(白)ではない場合
+            if self.background_color.is_none() && parent_style.background_color() != Color::white() {
+                self.background_color = Some(parent_style.background_color());
+            }
+            // 色が初期値(黒)ではない場合
+            if self.color.is_none() && parent_style.color() != Color::black() {
+                self.color = Some(parent_style.color());
+            }
+            // 文字の大きさが初期値(通常の大きさ)ではない場合
+            if self.font_size.is_none() && parent_style.font_size() != FontSize::Medium {
+                self.font_size = Some(parent_style.font_size());
+            }
+            if self.text_decoration.is_none() && parent_style.text_decoration() != TextDecoration::None {
+                self.text_decoration = Some(parent_style.text_decoration());
+            }
+        }
+
+        // 各プロパティの初期値
+        if self.background_color.is_none() {
+            self.background_color = Some(Color::white());
+        }
+        if self.color.is_none() {
+            self.color = Some(Color::black());
+        }
+        if self.display.is_none() {
+            self.display = Some(DisplayType::default(node));
+        }
+        if self.font_size.is_none() {
+            self.font_size = Some(FontSize::default(node));
+        }
+        if self.text_decoration.is_none() {
+            self.text_decoration = Some(TextDecoration::default(node));
+        }
+        if self.height.is_none() {
+            self.height = Some(0.0);
+        }
+        if self.width.is_none() {
+            self.width = Some(0.0);
+        }
     }
 }
 
@@ -137,7 +182,7 @@ impl Color {
 
     // color code -> name
     pub fn from_code(code: &str) -> Result<Self, Error> {
-        //
+        // codeの0文字目が'#'ではない、または長さが7でなければエラー
         if code.chars().nth(0) != Some('#') || code.len() != 7 {
             return Err(Error::UnexpectedInput(format!(
                 "invalid color code {}",
@@ -226,9 +271,9 @@ impl FontSize {
 // CSSの displayプロパティに対応する値を表す
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum DisplayType {
-    Block,
-    Inline,
-    DisplayNone,
+    Block, // ブロック要素
+    Inline, // インライン要素
+    DisplayNone, // 要素を非表示
 }
 
 impl DisplayType {
@@ -236,6 +281,7 @@ impl DisplayType {
         match &node.borrow().kind() {
             NodeKind::Document => DisplayType::Block,
             NodeKind::Element(e) => {
+                // 要素がブロック要素かインライン要素かを判定
                 if e.is_block_element() {
                     DisplayType::Block
                 } else {
@@ -243,6 +289,37 @@ impl DisplayType {
                 }
             }
             NodeKind::Text(_) => DisplayType::Inline,
+        }
+    }
+
+    pub fn from_str(s: &str) -> Result<Self, Error> {
+        match s {
+            "block" => Ok(Self::Block),
+            "inline" => Ok(Self::Inline),
+            "none" => Ok(Self::DisplayNone),
+            _ => Err(Error::UnexpectedInput(format!(
+                "display {:?} is not supported yrt",
+                s
+            ))),
+        }
+    }
+}
+
+// CSSの text-decorationプロパティに対応する値を表す列挙型
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum TextDecoration {
+    None, // 装飾なし
+    Underline, // テキストの下線
+}
+
+impl TextDecoration {
+    fn default(node: &Rc<RefCell<Node>>) -> Self {
+        match &node.borrow().kind() {
+            NodeKind::Element(element) => match element.kind() {
+                ElementKind::A => TextDecoration::Underline,
+                _ => TextDecoration::None,
+            },
+            _ => TextDecoration::None,
         }
     }
 }

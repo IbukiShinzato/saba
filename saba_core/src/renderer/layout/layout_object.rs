@@ -1,9 +1,21 @@
 use crate::renderer::dom::node::Node;
 use crate::renderer::dom::node::NodeKind;
 use crate::renderer::layout::computed_style::ComputedStyle;
+use crate::renderer::css::cssom::StyleSheet;
+use crate::renderer::layout::computed_style::DisplayType;
+use crate::renderer::css::cssom::Selector;
+use crate::renderer::css::cssom::ComponentValue;
+use crate::renderer::css::cssom::Declaration;
+use crate::renderer::layout::computed_style::Color;
+use crate::alloc::string::ToString;
+use crate::constants::CONTENT_AREA_WIDTH;
+use crate::constants::CHAR_WIDTH;
+use crate::constants::CHAR_HEIGHT_WITH_PADDING;
+use crate::renderer::layout::computed_style::FontSize;
 use alloc::rc::Rc;
 use alloc::rc::Weak;
 use core::cell::RefCell;
+use alloc::vec::Vec;
 
 // レイアウトツリーの一つのノードになり、描画に必要な情報を全て持った構造体
 #[derive(Debug, Clone)]
@@ -59,7 +71,7 @@ impl LayoutObject {
         self.next_sibling = next_sibling;
     }
 
-    fn next_sibling(&self) -> Option<Rc<RefCell<LayoutObject>>> {
+    pub fn next_sibling(&self) -> Option<Rc<RefCell<LayoutObject>>> {
         self.next_sibling.as_ref().cloned()
     }
 
@@ -78,6 +90,248 @@ impl LayoutObject {
 
     pub fn size(&self) -> LayoutSize {
         self.size
+    }
+
+    // ノードがセレクタにマッチしているかを確認する
+    pub fn is_node_selected(&self, selector: &Selector) -> bool {
+        match &self.node_kind() {
+            NodeKind::Element(e) => match selector {
+                Selector::TypeSelector(type_name) => {
+                    if e.kind().to_string() == *type_name {
+                        return true;
+                    }
+                    false
+                }
+                Selector::ClassSelector(class_name) => {
+                    for attr in &e.attributes() {
+                        if attr.name() == "class" && attr.value() == *class_name {
+                            return true;
+                        }
+                    }
+                    false
+                }
+                Selector::IdSelector(id_name) => {
+                    for attr in &e.attributes() {
+                        if attr.name() == "id" && attr.value() == *id_name {
+                            return true;
+                        }
+                    }
+                    false
+                }
+                Selector::UnknownSelector => false,
+            },
+            _ => false,
+        }
+    }
+
+    // CSSの宣言を適用する
+    pub fn cascading_style(&mut self, declarations: Vec<Declaration>) {
+        for declaration in declarations {
+            match declaration.property.as_str() {
+
+                // 関数化できそう
+                "background-color" => {
+                    if let ComponentValue::Ident(value) = &declaration.value {
+                        let color = match Color::from_name(&value) {
+                            Ok(color) => color,
+                            Err(_) => Color::white(),
+                        };
+                        self.style.set_background_color(color);
+                        continue;
+                    }
+                    if let ComponentValue::HashToken(color_code) = &declaration.value {
+                        let color = match Color::from_code(&color_code) {
+                            Ok(color) => color,
+                            Err(_) => Color::white(),
+                        };
+                        self.style.set_background_color(color);
+                        continue;
+                    }
+                }
+                "color" => {
+                    if let ComponentValue::Ident(value) = &declaration.value {
+                        let color = match Color::from_name(&value) {
+                            Ok(color) => color,
+                            Err(_) => Color::black(),
+                        };
+                        self.style.set_background_color(color);
+                    }
+                    if let ComponentValue::HashToken(color_code) = &declaration.value {
+                        let color = match Color::from_code(&color_code) {
+                            Ok(color) => color,
+                            Err(_) => Color::black(),
+                        };
+                        self.style.set_color(color);
+                    }
+                }
+                "display" => {
+                    if let ComponentValue::Ident(value) = declaration.value {
+                        let display_type = match DisplayType::from_str(&value) {
+                            Ok(display_type) => display_type,
+                            Err(_) => DisplayType::DisplayNone,
+                        };
+                        self.style.set_display(display_type)
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    // 初期値を設定する
+    pub fn defaulting_style(
+        &mut self,
+        node: &Rc<RefCell<Node>>,
+        parent_style: Option<ComputedStyle>
+    ) {
+        self.style.defaulting(node, parent_style);
+    }
+
+    // LayoutObjectの種類を更新する
+    // 最終的にLayoutObjectKindを決定する
+    pub fn update_kind(&mut self) {
+        match self.node_kind() {
+            NodeKind::Document => panic!("should not create a layout object for aDocumentnode"),
+            NodeKind::Element(_) => {
+                let display = self.style.display();
+                match display {
+                    DisplayType::Block => self.kind = LayoutObjectKind::Block,
+                    DisplayType::Inline => self.kind = LayoutObjectKind::Inline,
+                    DisplayType::DisplayNone => {
+                        panic!("should not create alayout object for display:none")
+                    }
+                }
+            }
+            NodeKind::Text(_) => self.kind = LayoutObjectKind::Text,
+        }
+    }
+
+    // ノードのサイズを計算する
+    pub fn compute_size(&mut self, parent_size: LayoutSize) {
+        let mut size = LayoutSize::new(0, 0);
+
+        match self.kind() {
+            // ブロック要素の場合
+            // 横幅は親要素と同じ
+            LayoutObjectKind::Block => {
+                size.set_width(parent_size.width());
+
+                let mut height = 0;
+                let mut child = self.first_child();
+                let mut previous_child_kind = LayoutObjectKind::Block;
+                while child.is_some() {
+                    let c = match child {
+                        Some(c) => c,
+                        None => panic!("first child should exist"),
+                    };
+
+                    if previous_child_kind == LayoutObjectKind::Block
+                        || c.borrow().kind() == LayoutObjectKind::Block
+                    {
+                        // 高さは子ノードの高さを足していく
+                        height += c.borrow().size.height();
+                    }
+
+                    previous_child_kind = c.borrow().kind();
+                    child = c.borrow().next_sibling();
+                }
+                size.set_height(height);
+            }
+            // インライン要素の場合
+            LayoutObjectKind::Inline => {
+                let mut width = 0;
+                let mut height = 0;
+                let mut child = self.first_child();
+                while child.is_some() {
+                    let c = match child {
+                        Some(c) => c,
+                        None => panic!("first child should exist"),
+                    };
+
+                    // 高さも横幅も子ノードのサイズを足していく
+                    width += c.borrow().size.width();
+                    height += c.borrow().size.height();
+
+                    child = c.borrow().next_sibling();
+                }
+
+                size.set_width(width);
+                size.set_height(height);
+            }
+            // テキストノードの場合
+            LayoutObjectKind::Text => {
+                if let NodeKind::Text(t) = self.node_kind() {
+                    let ratio = match self.style.font_size() {
+                        FontSize::Medium => 1,
+                        FontSize::XLarge => 2,
+                        FontSize::XXLarge => 3,
+                    };
+                    let width = CHAR_WIDTH * ratio * t.len() as i64;
+                    // ブラウザの描画エリアに収まるかどうかで場合分け
+                    // 収まらない場合は複数行にする
+                    if width > CONTENT_AREA_WIDTH {
+                        // テキストが複数行のとき
+                        size.set_width(CONTENT_AREA_WIDTH);
+                        let line_num = if width.wrapping_rem(CONTENT_AREA_WIDTH) == 0 {
+                            width.wrapping_div(CONTENT_AREA_WIDTH)
+                        } else {
+                            width.wrapping_div(CONTENT_AREA_WIDTH) + 1 // 最後の行を考慮して1行追加
+                        };
+                        size.set_height(CHAR_HEIGHT_WITH_PADDING * ratio * line_num);
+                    } else {
+                        // テキストが1行に収まるとき
+                        size.set_width(width);
+                        size.set_height(CHAR_HEIGHT_WITH_PADDING * ratio);
+                    }
+                }
+            }
+        }
+
+        self.size = size;
+    }
+
+    // 一つのノードの位置を計算するメソッド
+    pub fn compute_position(
+        &mut self,
+        parent_point: LayoutPoint,
+        previous_sibling_kind: LayoutObjectKind,
+        previous_sibling_point: Option<LayoutPoint>,
+        previous_sibling_size: Option<LayoutSize>,
+    ) {
+        let mut point = LayoutPoint::new(0, 0);
+
+        match (self.kind, previous_sibling_kind) {
+            // ブロック要素が兄弟ノードの場合、Y軸方向に進む
+            (LayoutObjectKind::Block, _) | (_, LayoutObjectKind::Block) => {
+                if let (Some(size), Some(pos)) = (previous_sibling_size, previous_sibling_point) {
+                    // 兄弟ノードのYの位置と高さを足し合わせた値を設定
+                    point.set_y(pos.y() + size.height());
+                } else {
+                    // 親のY座標をセット
+                    point.set_y(parent_point.y());
+                }
+                // X座標は常に親の値
+                point.set_x(parent_point.x());
+            }
+            // 対象と兄弟ノードがインライン要素の場合、X軸方向に進む
+            (LayoutObjectKind::Inline, LayoutObjectKind::Inline) => {
+                if let (Some(size), Some(pos)) = (previous_sibling_size, previous_sibling_point) {
+                    // 兄弟ノードのX座標と横幅を足したものが次の位置に
+                    point.set_x(pos.x() + size.width());
+                    // 兄弟ノードのY座標が、対象のY座標に
+                    point.set_y(pos.y());
+                } else { //兄弟ノードがなければ
+                    // 親の座標をセット
+                    point.set_x(parent_point.x());
+                    point.set_y(parent_point.y());
+                }
+            }
+            _ => {
+                point.set_x(parent_point.x());
+                point.set_y(parent_point.y());
+            }
+        }
+        self.point = point;
     }
 }
 
@@ -147,5 +401,50 @@ impl LayoutSize {
 
     pub fn set_height(&mut self, height: i64) {
         self.height = height;
+    }
+}
+
+pub fn create_layout_object(
+    node: &Option<Rc<RefCell<Node>>>,
+    parent_obj: &Option<Rc<RefCell<LayoutObject>>>,
+    cssom: &StyleSheet,
+) -> Option<Rc<RefCell<LayoutObject>>> {
+    if let Some(n) = node {
+        // LayoutObjectを生成する
+        let layout_object = Rc::new(RefCell::new(LayoutObject::new(n.clone(), parent_obj)));
+
+        // CSSのルールをノードに適用する
+        for rule in &cssom.rules {
+            if layout_object.borrow().is_node_selected(&rule.selector) {
+                layout_object
+                    .borrow_mut()
+                    .cascading_style(rule.declarations.clone());
+            }
+        }
+
+        // 初期値を設定する
+        // 親のノードかデフォルトの値を使う
+        let parent_style = if let Some(parent) = parent_obj {
+            Some(parent.borrow().style())
+        } else {
+            None
+        };
+        layout_object.borrow_mut().defaulting_style(n, parent_style);
+
+        // display:noneの場合、nodeを返さない
+        if layout_object.borrow().style().display() == DisplayType::DisplayNone {
+            return None;
+        }
+
+        // LayoutObjectの種類を更新する
+        layout_object.borrow_mut().update_kind();
+        return Some(layout_object);
+    }
+    None
+}
+
+impl PartialEq for LayoutObject {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
     }
 }
