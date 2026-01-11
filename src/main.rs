@@ -8,9 +8,12 @@ use net_wasabi::http::HttpClient;
 use noli::prelude::*;
 
 use crate::alloc::string::String;
+use alloc::rc::Rc;
+use core::cell::RefCell;
 use noli::*;
 use saba_core::browser::Browser;
 use saba_core::http::HttpResponse;
+use ui_wasabi::app::WasabiUI;
 
 static TEST_HTTP_RESPONSE: &str = r#"HTTP/1.1 200 OK
 Data: xx xx xx
@@ -61,6 +64,18 @@ fn main() -> u64 {
 
     for log in dom_string.lines() {
         println!("{}", log);
+    }
+
+    let browser = Browser::new();
+
+    let ui = Rc::new(RefCell::new(WasabiUI::new(browser)));
+
+    match ui.borrow_mut().start() {
+        Ok(_) => {}
+        Err(e) => {
+            println!("browser fails to start {:?}", e);
+            return 1;
+        }
     }
 
     0

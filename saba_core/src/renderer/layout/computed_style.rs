@@ -94,7 +94,8 @@ impl ComputedStyle {
         if let Some(parent_style) = parent_style {
             // CSSの値が初期値と異なる場合、初期値を継承する
             // バックグラウンドカラーが初期値(白)ではない場合
-            if self.background_color.is_none() && parent_style.background_color() != Color::white() {
+            if self.background_color.is_none() && parent_style.background_color() != Color::white()
+            {
                 self.background_color = Some(parent_style.background_color());
             }
             // 色が初期値(黒)ではない場合
@@ -105,7 +106,9 @@ impl ComputedStyle {
             if self.font_size.is_none() && parent_style.font_size() != FontSize::Medium {
                 self.font_size = Some(parent_style.font_size());
             }
-            if self.text_decoration.is_none() && parent_style.text_decoration() != TextDecoration::None {
+            if self.text_decoration.is_none()
+                && parent_style.text_decoration() != TextDecoration::None
+            {
                 self.text_decoration = Some(parent_style.text_decoration());
             }
         }
@@ -271,8 +274,8 @@ impl FontSize {
 // CSSの displayプロパティに対応する値を表す
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum DisplayType {
-    Block, // ブロック要素
-    Inline, // インライン要素
+    Block,       // ブロック要素
+    Inline,      // インライン要素
     DisplayNone, // 要素を非表示
 }
 
@@ -308,7 +311,7 @@ impl DisplayType {
 // CSSの text-decorationプロパティに対応する値を表す列挙型
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum TextDecoration {
-    None, // 装飾なし
+    None,      // 装飾なし
     Underline, // テキストの下線
 }
 

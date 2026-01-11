@@ -1,21 +1,21 @@
-use crate::renderer::dom::node::Node;
-use crate::renderer::dom::node::NodeKind;
-use crate::renderer::layout::computed_style::ComputedStyle;
-use crate::renderer::css::cssom::StyleSheet;
-use crate::renderer::layout::computed_style::DisplayType;
-use crate::renderer::css::cssom::Selector;
+use crate::alloc::string::ToString;
+use crate::constants::CHAR_HEIGHT_WITH_PADDING;
+use crate::constants::CHAR_WIDTH;
+use crate::constants::CONTENT_AREA_WIDTH;
 use crate::renderer::css::cssom::ComponentValue;
 use crate::renderer::css::cssom::Declaration;
+use crate::renderer::css::cssom::Selector;
+use crate::renderer::css::cssom::StyleSheet;
+use crate::renderer::dom::node::Node;
+use crate::renderer::dom::node::NodeKind;
 use crate::renderer::layout::computed_style::Color;
-use crate::alloc::string::ToString;
-use crate::constants::CONTENT_AREA_WIDTH;
-use crate::constants::CHAR_WIDTH;
-use crate::constants::CHAR_HEIGHT_WITH_PADDING;
+use crate::renderer::layout::computed_style::ComputedStyle;
+use crate::renderer::layout::computed_style::DisplayType;
 use crate::renderer::layout::computed_style::FontSize;
 use alloc::rc::Rc;
 use alloc::rc::Weak;
-use core::cell::RefCell;
 use alloc::vec::Vec;
+use core::cell::RefCell;
 
 // レイアウトツリーの一つのノードになり、描画に必要な情報を全て持った構造体
 #[derive(Debug, Clone)]
@@ -128,7 +128,6 @@ impl LayoutObject {
     pub fn cascading_style(&mut self, declarations: Vec<Declaration>) {
         for declaration in declarations {
             match declaration.property.as_str() {
-
                 // 関数化できそう
                 "background-color" => {
                     if let ComponentValue::Ident(value) = &declaration.value {
@@ -182,7 +181,7 @@ impl LayoutObject {
     pub fn defaulting_style(
         &mut self,
         node: &Rc<RefCell<Node>>,
-        parent_style: Option<ComputedStyle>
+        parent_style: Option<ComputedStyle>,
     ) {
         self.style.defaulting(node, parent_style);
     }
@@ -320,7 +319,8 @@ impl LayoutObject {
                     point.set_x(pos.x() + size.width());
                     // 兄弟ノードのY座標が、対象のY座標に
                     point.set_y(pos.y());
-                } else { //兄弟ノードがなければ
+                } else {
+                    //兄弟ノードがなければ
                     // 親の座標をセット
                     point.set_x(parent_point.x());
                     point.set_y(parent_point.y());

@@ -11,25 +11,25 @@ use crate::renderer::layout::layout_object::LayoutSize;
 use alloc::rc::Rc;
 use core::cell::RefCell;
 
-
 fn build_layout_tree(
-    node: &Option<Rc<RefCell<Node>>>, // 現在のDOMノード
+    node: &Option<Rc<RefCell<Node>>>,               // 現在のDOMノード
     parent_obj: &Option<Rc<RefCell<LayoutObject>>>, // 親のレイアウトオブジェクト
-    cssom: &StyleSheet, // CSSのスタイルシート
+    cssom: &StyleSheet,                             // CSSのスタイルシート
 ) -> Option<Rc<RefCell<LayoutObject>>> {
     // ノードとなるLayoutObjectの作成を試みる。CSSでdisplay:Noneならノードは作成されない
-   let mut target_node = node.clone();
-   let mut layout_object = create_layout_object(node, parent_obj, cssom);
-   
+    let mut target_node = node.clone();
+    let mut layout_object = create_layout_object(node, parent_obj, cssom);
+
     // ノードが作成されなかった時にDOMノードの兄弟のーどを走査する。
     while layout_object.is_none() {
-       if let Some(n) = target_node { 
-           target_node = n.borrow().next_sibling().clone();
-           layout_object = create_layout_object(&target_node, parent_obj, cssom);
-       } else { // 兄弟ノードがない場合 
-           return layout_object; 
-       }
-   }
+        if let Some(n) = target_node {
+            target_node = n.borrow().next_sibling().clone();
+            layout_object = create_layout_object(&target_node, parent_obj, cssom);
+        } else {
+            // 兄弟ノードがない場合
+            return layout_object;
+        }
+    }
 
     if let Some(n) = target_node {
         let original_first_child = n.borrow().first_child();
@@ -57,18 +57,18 @@ fn build_layout_tree(
 
         if next_sibling.is_none() && n.borrow().next_sibling().is_some() {
             let mut original_dom_node = original_next_sibling
-            .expect("first child should exis")
-            .borrow()
-            .next_sibling();
+                .expect("first child should exis")
+                .borrow()
+                .next_sibling();
 
             loop {
                 next_sibling = build_layout_tree(&original_dom_node, &None, cssom);
 
                 if next_sibling.is_none() && original_dom_node.is_some() {
                     original_dom_node = original_dom_node
-                    .expect("first child should exis")
-                    .borrow()
-                    .next_sibling();
+                        .expect("first child should exis")
+                        .borrow()
+                        .next_sibling();
                     continue;
                 }
                 break;
@@ -77,14 +77,13 @@ fn build_layout_tree(
 
         let obj = match layout_object {
             Some(ref obj) => obj,
-            None => panic!("render object should exist here")
+            None => panic!("render object should exist here"),
         };
         obj.borrow_mut().set_first_child(first_child);
-        obj.borrow_mut().set_next_sibling(next_sibling); 
+        obj.borrow_mut().set_next_sibling(next_sibling);
     }
     layout_object
 }
-
 
 #[derive(Debug, Clone)]
 pub struct LayoutView {
@@ -104,7 +103,7 @@ impl LayoutView {
 
         tree
     }
-  
+
     // レイアウトツリーの各ノードのサイズと位置を計算する関数
     fn update_layout(&mut self) {
         Self::calculate_node_size(&self.root, LayoutSize::new(CONTENT_AREA_WIDTH, 0));
@@ -117,11 +116,10 @@ impl LayoutView {
             None,
         );
     }
-  
-      pub fn root(&self) -> Option<Rc<RefCell<LayoutObject>>> {
+
+    pub fn root(&self) -> Option<Rc<RefCell<LayoutObject>>> {
         self.root.clone()
     }
-
 
     // レイアウトツリーの各ノードのサイズを再帰的に計算する関数
     fn calculate_node_size(node: &Option<Rc<RefCell<LayoutObject>>>, parent_size: LayoutSize) {
@@ -143,8 +141,8 @@ impl LayoutView {
     // レイアウトツリーのノードを計算する
     fn calculate_node_position(
         node: &Option<Rc<RefCell<LayoutObject>>>, // ターゲットのノード
-        parent_point: LayoutPoint, // 親ノードの位置
-        previous_sibling_kind: LayoutObjectKind, // 前の兄弟ノードの種類
+        parent_point: LayoutPoint,                // 親ノードの位置
+        previous_sibling_kind: LayoutObjectKind,  // 前の兄弟ノードの種類
         previous_sibling_point: Option<LayoutPoint>, // 前の兄弟ノードの位置
         previous_sibling_size: Option<LayoutSize>, // 前の兄弟ノードのサイズ
     ) {
@@ -179,8 +177,6 @@ impl LayoutView {
         }
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -253,7 +249,7 @@ mod tests {
                 .borrow()
                 .node_kind()
         );
-        
+
         let text = root.expect("root should exist").borrow().first_child();
         assert!(text.is_some());
         assert_eq!(
