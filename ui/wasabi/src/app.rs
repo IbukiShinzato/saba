@@ -54,7 +54,16 @@ impl WasabiUI {
                 WINDOW_WIDTH,
                 WINDOW_HEIGHT,
             )
-            .unwrap(),
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Failed to create window 'saba' at ({}, {}), size {}x{}: {:?}",
+                    WINDOW_INIT_X_POS,
+                    WINDOW_INIT_Y_POS,
+                    WINDOW_WIDTH,
+                    WINDOW_HEIGHT,
+                    e
+                )
+            }),
             // cursor: Cursor::new(),
         }
     }
