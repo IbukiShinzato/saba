@@ -20,7 +20,7 @@ fn build_layout_tree(
     let mut target_node = node.clone();
     let mut layout_object = create_layout_object(node, parent_obj, cssom);
 
-    // ノードが作成されなかった時にDOMノードの兄弟のーどを走査する。
+    // ノードが作成されなかった時にDOMノードの兄弟のノードを走査する。
     while layout_object.is_none() {
         if let Some(n) = target_node {
             target_node = n.borrow().next_sibling().clone();
