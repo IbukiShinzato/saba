@@ -57,7 +57,7 @@ fn build_layout_tree(
 
         if next_sibling.is_none() && n.borrow().next_sibling().is_some() {
             let mut original_dom_node = original_next_sibling
-                .expect("first child should exis")
+                .expect("first child should exist")
                 .borrow()
                 .next_sibling();
 
@@ -66,7 +66,7 @@ fn build_layout_tree(
 
                 if next_sibling.is_none() && original_dom_node.is_some() {
                     original_dom_node = original_dom_node
-                        .expect("first child should exis")
+                        .expect("first child should exist")
                         .borrow()
                         .next_sibling();
                     continue;
