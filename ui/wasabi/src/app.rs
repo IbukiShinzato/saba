@@ -115,9 +115,9 @@ impl WasabiUI {
                 );
                 // ウィンドウの外をクリックされたときは何もしない
                 if relative_pos.0 < 0
-                    || relative_pos.0 > WINDOW_WIDTH
+                    || relative_pos.0 >= WINDOW_WIDTH
                     || relative_pos.1 < 0
-                    || relative_pos.1 > WINDOW_HEIGHT
+                    || relative_pos.1 >= WINDOW_HEIGHT
                 {
                     println!("button clicked OUTSIDE window: {button:?} {position:?}");
 
