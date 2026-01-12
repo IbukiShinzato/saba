@@ -101,7 +101,7 @@ impl WasabiUI {
     fn handle_mouse_input(&mut self) -> Result<(), Error> {
         // 5番のシステムコール
         if let Some(MouseEvent {
-            button: button,
+            button,
             position,
         }) = Api::get_mouse_cursor_info()
         {
