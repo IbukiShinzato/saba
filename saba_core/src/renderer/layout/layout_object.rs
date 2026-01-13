@@ -1,21 +1,22 @@
-use crate::renderer::dom::node::Node;
-use crate::renderer::dom::node::NodeKind;
-use crate::renderer::layout::computed_style::ComputedStyle;
-use crate::renderer::css::cssom::StyleSheet;
-use crate::renderer::layout::computed_style::DisplayType;
-use crate::renderer::css::cssom::Selector;
+use crate::alloc::string::ToString;
+use crate::constants::CHAR_HEIGHT_WITH_PADDING;
+use crate::constants::CHAR_WIDTH;
+use crate::constants::CONTENT_AREA_WIDTH;
 use crate::renderer::css::cssom::ComponentValue;
 use crate::renderer::css::cssom::Declaration;
+use crate::renderer::css::cssom::Selector;
+use crate::renderer::css::cssom::StyleSheet;
+use crate::renderer::dom::node::Node;
+use crate::renderer::dom::node::NodeKind;
 use crate::renderer::layout::computed_style::Color;
-use crate::alloc::string::ToString;
-use crate::constants::CONTENT_AREA_WIDTH;
-use crate::constants::CHAR_WIDTH;
-use crate::constants::CHAR_HEIGHT_WITH_PADDING;
+use crate::renderer::layout::computed_style::ComputedStyle;
+use crate::renderer::layout::computed_style::DisplayType;
 use crate::renderer::layout::computed_style::FontSize;
 use alloc::rc::Rc;
 use alloc::rc::Weak;
-use core::cell::RefCell;
 use alloc::vec::Vec;
+use core::cell::RefCell;
+use core::str::FromStr;
 
 // レイアウトツリーの一つのノードになり、描画に必要な情報を全て持った構造体
 #[derive(Debug, Clone)]
@@ -128,11 +129,10 @@ impl LayoutObject {
     pub fn cascading_style(&mut self, declarations: Vec<Declaration>) {
         for declaration in declarations {
             match declaration.property.as_str() {
-
                 // 関数化できそう
                 "background-color" => {
                     if let ComponentValue::Ident(value) = &declaration.value {
-                        let color = match Color::from_name(&value) {
+                        let color = match Color::from_name(value) {
                             Ok(color) => color,
                             Err(_) => Color::white(),
                         };
@@ -140,7 +140,7 @@ impl LayoutObject {
                         continue;
                     }
                     if let ComponentValue::HashToken(color_code) = &declaration.value {
-                        let color = match Color::from_code(&color_code) {
+                        let color = match Color::from_code(color_code) {
                             Ok(color) => color,
                             Err(_) => Color::white(),
                         };
@@ -150,14 +150,14 @@ impl LayoutObject {
                 }
                 "color" => {
                     if let ComponentValue::Ident(value) = &declaration.value {
-                        let color = match Color::from_name(&value) {
+                        let color = match Color::from_name(value) {
                             Ok(color) => color,
                             Err(_) => Color::black(),
                         };
                         self.style.set_background_color(color);
                     }
                     if let ComponentValue::HashToken(color_code) = &declaration.value {
-                        let color = match Color::from_code(&color_code) {
+                        let color = match Color::from_code(color_code) {
                             Ok(color) => color,
                             Err(_) => Color::black(),
                         };
@@ -182,7 +182,7 @@ impl LayoutObject {
     pub fn defaulting_style(
         &mut self,
         node: &Rc<RefCell<Node>>,
-        parent_style: Option<ComputedStyle>
+        parent_style: Option<ComputedStyle>,
     ) {
         self.style.defaulting(node, parent_style);
     }
@@ -320,7 +320,8 @@ impl LayoutObject {
                     point.set_x(pos.x() + size.width());
                     // 兄弟ノードのY座標が、対象のY座標に
                     point.set_y(pos.y());
-                } else { //兄弟ノードがなければ
+                } else {
+                    //兄弟ノードがなければ
                     // 親の座標をセット
                     point.set_x(parent_point.x());
                     point.set_y(parent_point.y());
@@ -424,11 +425,7 @@ pub fn create_layout_object(
 
         // 初期値を設定する
         // 親のノードかデフォルトの値を使う
-        let parent_style = if let Some(parent) = parent_obj {
-            Some(parent.borrow().style())
-        } else {
-            None
-        };
+        let parent_style = parent_obj.as_ref().map(|parent| parent.borrow().style());
         layout_object.borrow_mut().defaulting_style(n, parent_style);
 
         // display:noneの場合、nodeを返さない

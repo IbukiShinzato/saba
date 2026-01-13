@@ -14,6 +14,12 @@ pub struct Window {
     document: Rc<RefCell<Node>>,
 }
 
+impl Default for Window {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Window {
     pub fn new() -> Self {
         let window = Self {
@@ -195,10 +201,10 @@ impl Element {
 
     // 要素がデフォルトでブロック要素かインライン要素かを決める
     pub fn is_block_element(&self) -> bool {
-        match self.kind {
-            ElementKind::Body | ElementKind::H1 | ElementKind::H2 | ElementKind::P => true,
-            _ => false,
-        }
+        matches!(
+            self.kind(),
+            ElementKind::Body | ElementKind::H1 | ElementKind::H2 | ElementKind::P
+        )
     }
 
     pub fn attributes(&self) -> Vec<Attribute> {
