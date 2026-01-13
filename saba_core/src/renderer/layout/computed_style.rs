@@ -7,6 +7,7 @@ use alloc::rc::Rc;
 use alloc::string::String;
 use alloc::string::ToString;
 use core::cell::RefCell;
+use core::str::FromStr;
 
 // 計算値を表す構造体
 // Task: これ以外のCSSのプロパティの実装
@@ -19,6 +20,12 @@ pub struct ComputedStyle {
     text_decoration: Option<TextDecoration>,
     height: Option<f64>,
     width: Option<f64>,
+}
+
+impl Default for ComputedStyle {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ComputedStyle {
@@ -294,8 +301,12 @@ impl DisplayType {
             NodeKind::Text(_) => DisplayType::Inline,
         }
     }
+}
 
-    pub fn from_str(s: &str) -> Result<Self, Error> {
+impl FromStr for DisplayType {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "block" => Ok(Self::Block),
             "inline" => Ok(Self::Inline),

@@ -7,10 +7,10 @@ use crate::alloc::string::ToString;
 use net_wasabi::http::HttpClient;
 use noli::prelude::*;
 
-use crate::alloc::string::String;
+// use crate::alloc::string::String;
 use alloc::rc::Rc;
 use core::cell::RefCell;
-use noli::*;
+// use noli::*;
 use saba_core::browser::Browser;
 use saba_core::http::HttpResponse;
 use ui_wasabi::app::WasabiUI;

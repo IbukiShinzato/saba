@@ -16,9 +16,9 @@ use saba_core::browser::Browser;
 use saba_core::constants::*;
 // use saba_core::display_item::DisplayItem;
 use saba_core::error::Error;
-use saba_core::http::HttpResponse;
-use saba_core::renderer::layout::computed_style::FontSize;
-use saba_core::renderer::layout::computed_style::TextDecoration;
+// use saba_core::http::HttpResponse;
+// use saba_core::renderer::layout::computed_style::FontSize;
+// use saba_core::renderer::layout::computed_style::TextDecoration;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum InputMode {
@@ -28,7 +28,7 @@ enum InputMode {
 
 #[derive(Debug)]
 pub struct WasabiUI {
-    browser: Rc<RefCell<Browser>>,
+    _browser: Rc<RefCell<Browser>>,
     input_url: String,
     input_mode: InputMode,
     window: Window,
@@ -36,9 +36,9 @@ pub struct WasabiUI {
 }
 
 impl WasabiUI {
-    pub fn new(browser: Rc<RefCell<Browser>>) -> Self {
+    pub fn new(_browser: Rc<RefCell<Browser>>) -> Self {
         Self {
-            browser,
+            _browser,
             input_url: String::new(),
             input_mode: InputMode::Normal,
             window: Window::new(
@@ -491,10 +491,10 @@ impl WasabiUI {
     //     }
 }
 
-fn convert_font_size(size: FontSize) -> StringSize {
-    match size {
-        FontSize::Medium => StringSize::Medium,
-        FontSize::XLarge => StringSize::Large,
-        FontSize::XXLarge => StringSize::XLarge,
-    }
-}
+// fn convert_font_size(size: FontSize) -> StringSize {
+//     match size {
+//         FontSize::Medium => StringSize::Medium,
+//         FontSize::XLarge => StringSize::Large,
+//         FontSize::XXLarge => StringSize::XLarge,
+//     }
+// }

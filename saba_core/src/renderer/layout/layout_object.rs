@@ -16,6 +16,7 @@ use alloc::rc::Rc;
 use alloc::rc::Weak;
 use alloc::vec::Vec;
 use core::cell::RefCell;
+use core::str::FromStr;
 
 // レイアウトツリーの一つのノードになり、描画に必要な情報を全て持った構造体
 #[derive(Debug, Clone)]
