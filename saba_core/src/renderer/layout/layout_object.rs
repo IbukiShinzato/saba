@@ -131,7 +131,7 @@ impl LayoutObject {
                 // 関数化できそう
                 "background-color" => {
                     if let ComponentValue::Ident(value) = &declaration.value {
-                        let color = match Color::from_name(&value) {
+                        let color = match Color::from_name(value) {
                             Ok(color) => color,
                             Err(_) => Color::white(),
                         };
@@ -139,7 +139,7 @@ impl LayoutObject {
                         continue;
                     }
                     if let ComponentValue::HashToken(color_code) = &declaration.value {
-                        let color = match Color::from_code(&color_code) {
+                        let color = match Color::from_code(color_code) {
                             Ok(color) => color,
                             Err(_) => Color::white(),
                         };
@@ -149,14 +149,14 @@ impl LayoutObject {
                 }
                 "color" => {
                     if let ComponentValue::Ident(value) = &declaration.value {
-                        let color = match Color::from_name(&value) {
+                        let color = match Color::from_name(value) {
                             Ok(color) => color,
                             Err(_) => Color::black(),
                         };
                         self.style.set_background_color(color);
                     }
                     if let ComponentValue::HashToken(color_code) = &declaration.value {
-                        let color = match Color::from_code(&color_code) {
+                        let color = match Color::from_code(color_code) {
                             Ok(color) => color,
                             Err(_) => Color::black(),
                         };
@@ -424,11 +424,7 @@ pub fn create_layout_object(
 
         // 初期値を設定する
         // 親のノードかデフォルトの値を使う
-        let parent_style = if let Some(parent) = parent_obj {
-            Some(parent.borrow().style())
-        } else {
-            None
-        };
+        let parent_style = parent_obj.as_ref().map(|parent| parent.borrow().style());
         layout_object.borrow_mut().defaulting_style(n, parent_style);
 
         // display:noneの場合、nodeを返さない

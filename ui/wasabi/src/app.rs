@@ -1,5 +1,5 @@
 use crate::alloc::string::ToString;
-// use crate::cursor::Cursor;
+use crate::cursor::Cursor;
 use alloc::format;
 use alloc::rc::Rc;
 use alloc::string::String;
@@ -32,7 +32,7 @@ pub struct WasabiUI {
     input_url: String,
     input_mode: InputMode,
     window: Window,
-    // cursor: Cursor,
+    cursor: Cursor,
 }
 
 impl WasabiUI {
@@ -52,14 +52,10 @@ impl WasabiUI {
             .unwrap_or_else(|e| {
                 panic!(
                     "Failed to create window 'saba' at ({}, {}), size {}x{}: {:?}",
-                    WINDOW_INIT_X_POS,
-                    WINDOW_INIT_Y_POS,
-                    WINDOW_WIDTH,
-                    WINDOW_HEIGHT,
-                    e
+                    WINDOW_INIT_X_POS, WINDOW_INIT_Y_POS, WINDOW_WIDTH, WINDOW_HEIGHT, e
                 )
             }),
-            // cursor: Cursor::new(),
+            cursor: Cursor::new(),
         }
     }
 
@@ -95,12 +91,13 @@ impl WasabiUI {
 
     fn handle_mouse_input(&mut self) -> Result<(), Error> {
         // 5番のシステムコール
-        if let Some(MouseEvent {
-            button,
-            position,
-        }) = Api::get_mouse_cursor_info()
-        {
+        if let Some(MouseEvent { button, position }) = Api::get_mouse_cursor_info() {
             println!("mouse position {:?}", position);
+            self.window.flush_area(self.cursor.rect());
+            self.cursor.set_position(position.x, position.y);
+            self.window.flush_area(self.cursor.rect());
+            self.cursor.flush();
+
             if button.l() || button.c() || button.r() {
                 println!("mouse clicked {:?}", button);
                 // 相対位置を計算する
