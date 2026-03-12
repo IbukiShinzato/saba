@@ -16,6 +16,12 @@ pub struct Page {
     frame: Option<Rc<RefCell<Window>>>,
 }
 
+impl Default for Page {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Page {
     pub fn new() -> Self {
         Self {
